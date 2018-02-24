@@ -53,7 +53,8 @@ artifacts/
 *_i.h
 *.ilk
 *.meta
-*.obj
+#Need our shapes to get stored
+#*.obj
 *.pch
 *.pdb
 *.pgc
