@@ -1,6 +1,7 @@
 #include "Game.h"
 #include "Vertex.h"
 #include <d3d11.h>
+#include <conio.h>
 
 // For the DirectX Math library
 using namespace DirectX;
@@ -27,7 +28,7 @@ Game::Game(HINSTANCE hInstance)
 	CreateConsoleWindow(500, 120, 32, 120);
 	printf("Console window created successfully.  Feel free to printf() here.");
 #endif
-	
+	isBallDirectionLeft = true;
 }
 
 // --------------------------------------------------------
@@ -41,7 +42,7 @@ Game::~Game()
 	// we've made in the Game class
 
 	//Delete the Mesh objects
-	for (int i = 0; i < meshObjects.size(); i++)
+	for (uint16_t i = 0; i < meshObjects.size(); i++)
 	{
 		delete meshObjects[i];
 		meshObjects[i] = nullptr;
@@ -49,7 +50,7 @@ Game::~Game()
 	meshObjects.clear();
 
 	//Delete the Game Entity objects
-	for (int i = 0; i < gameObjects.size(); i++)
+	for (uint16_t i = 0; i < gameObjects.size(); i++)
 	{
 		delete gameObjects[i];
 		gameObjects[i] = nullptr;
@@ -57,7 +58,7 @@ Game::~Game()
 	gameObjects.clear();
 
 	//Delete the Material objects
-	for (int i = 0; i < materialObjects.size(); i++)
+	for (uint16_t i = 0; i < materialObjects.size(); i++)
 	{
 		delete materialObjects[i];
 		materialObjects[i] = nullptr;
@@ -80,6 +81,9 @@ void Game::Init()
 	// Helper methods for loading shaders, creating some basic
 	// geometry to draw and some simple camera matrices.
 	//  - You'll be expanding and/or replacing these later
+	pathPosition = XMFLOAT3(0.0f, -0.52f, 2.0f);
+	lastStraightCreated = true;
+	isFalling = false;
 	LoadTheDirectionalLight();
 	LoadShadersAndTextures();
 	CreateCamera();
@@ -276,7 +280,8 @@ void Game::CreateBasicGeometry()
 	
 	Mesh *torus = new Mesh("../../Assets/Models/torus.obj", device);
 	Mesh *helix = new Mesh("../../Assets/Models/helix.obj", device);
-
+	Mesh *sphere = new Mesh("../../Assets/Models/sphere.obj", device);
+	Mesh *cube = new Mesh("../../Assets/Models/cube.obj", device);
 	//Push objects in vector	
 	meshObjects.push_back(triangle);	//0
 	meshObjects.push_back(square);		//1
@@ -284,25 +289,29 @@ void Game::CreateBasicGeometry()
 	meshObjects.push_back(cnc);			//3
 	meshObjects.push_back(torus);		//4
 	meshObjects.push_back(helix);		//5
+	meshObjects.push_back(sphere);		//6
+	meshObjects.push_back(cube);		//7
 }
 void Game::CreateEntities()
 {
 	//Common positions for now
 	XMFLOAT3 position = XMFLOAT3(0.0f, 0.0f, 0.0f);
-	XMFLOAT3 rotation = XMFLOAT3(0.0f, 0.0f, 0.0f);;
-	XMFLOAT3 scale = XMFLOAT3(1.0f, 1.0f, 1.0f);;
+	XMFLOAT3 rotation = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	XMFLOAT3 scale = XMFLOAT3(0.8f, 0.8f, 0.8f);
 
 	//GameEntity *entity1 = new GameEntity(position, rotation, scale, meshObjects[0], materialObjects[0]);
 	//GameEntity *entity2 = new GameEntity(position, rotation, scale, meshObjects[5], materialObjects[0]);
 	//GameEntity *entity3 = new GameEntity(position, rotation, scale, meshObjects[4], materialObjects[0]);
-	GameEntity *entity4 = new GameEntity(position, rotation, scale, meshObjects[4], materialObjects[0]);
-	GameEntity *entity5 = new GameEntity(position, rotation, scale, meshObjects[5], materialObjects[1]);
+	//GameEntity *entity4 = new GameEntity(position, rotation, scale, meshObjects[4], materialObjects[0]);
+	GameEntity *entity5 = new GameEntity(position, rotation, scale, meshObjects[6], materialObjects[1]);
 
 	//gameObjects.push_back(entity1);
 	//gameObjects.push_back(entity2);
 	//gameObjects.push_back(entity3);
-	gameObjects.push_back(entity4);
+	//gameObjects.push_back(entity4);
 	gameObjects.push_back(entity5);
+	CreatePlankStraight();
+	CreatePlankStraight();
 }
 
 
@@ -321,20 +330,46 @@ void Game::OnResize()
 void Game::Update(float deltaTime, float totalTime)
 {
 
-	//gameObjects[0]->MoveRelative(0.4f * deltaTime, 0.0f, 0.0f);
-	gameObjects[0]->RotateRelative(0.0f, 0.0f, 0.2f * deltaTime);
-	gameObjects[1]->RotateRelative(0.0f, deltaTime, 0.0f);
-	//gameObjects[1]->RotateRelative(0.0f, 0.0f, 0.1f * deltaTime);
+	MoveBallOnPlatform(deltaTime);
+	CheckPhysics();
+	if ((int)totalTime == timeToCheck)
+	{
+		timeToCheck += 2;
+		CreatePath();
+	}
 
-	//gameObjects[1]->ResizeRelative(-0.01f * deltaTime, -0.01f * deltaTime, 0.0f);
+	//Change boll rotation on key-press
+	//NEEDS TO BE FIXED!
+	const int KEY_UP = 0x1;
+	if (!isFalling && (GetAsyncKeyState(VK_SPACE) & KEY_UP) == KEY_UP)
+	{
 
-	//gameObjects[2]->ResizeRelative(-0.05f * deltaTime, 0.0f, 0.0f);
-	
-	gameObjects[0]->SetPosition(0.0f, 1.5f * sin(totalTime) , 0.0f);
+		if (isBallDirectionLeft)
+		{
+			gameObjects[0]->RotateRelative(0.0f, -degreeRotation, 0.0f);
+			
+		}
+		else
+		{
+			gameObjects[0]->RotateRelative(0.0f, +degreeRotation, 0.0f);
+		}
+		isBallDirectionLeft = !isBallDirectionLeft;
+	}
 
-	//gameObjects[4]->SetScale(10.5f * sin(totalTime), 10.5f * sin(totalTime), 0.0f);
-
-	camera->Update(deltaTime);
+	//camera->Update(deltaTime);
+	if (GetAsyncKeyState(VK_RETURN))
+	{	
+		
+#if defined(DEBUG) || defined(_DEBUG)
+		//Print camera position to implement
+		XMFLOAT3 cPosition = camera->GetPosition();
+		XMFLOAT3 cDirection = camera->GetDirection();
+		XMFLOAT3 bPosition = camera->GetPosition();
+		printf("Camera position x: %f  y: %f z: %f \n", cPosition.x, cPosition.y, cPosition.z);
+		printf("Camera direction x: %f  y: %f z: %f \n", cDirection.x, cDirection.y, cDirection.z);
+		printf("Ball position x: %f  y: %f z: %f \n", bPosition.x, bPosition.y, bPosition.z);
+#endif
+	}	
 
 	// Quit if the escape key is pressed
 	if (GetAsyncKeyState(VK_ESCAPE))
@@ -347,8 +382,8 @@ void Game::Update(float deltaTime, float totalTime)
 void Game::Draw(float deltaTime, float totalTime)
 {
 	// Background color (Cornflower Blue in this case) for clearing
-	const float color[4] = { 0.4f, 0.6f, 0.75f, 0.0f };
-
+	//const float color[4] = { 0.4f, 0.6f, 0.75f, 0.0f };
+	const float color[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
 	// Clear the render target and depth buffer (erases what's on the screen)
 	//  - Do this ONCE PER FRAME
 	//  - At the beginning of Draw (before drawing *anything*)
@@ -359,7 +394,7 @@ void Game::Draw(float deltaTime, float totalTime)
 		1.0f,
 		0);
 
-	for (int i = 0; i < gameObjects.size(); i++)
+	for (uint16_t i = 0; i < gameObjects.size(); i++)
 	{
 		gameObjects[i]->PrepareMaterial(camera->getViewMatrix(), camera->getProjectionMatrix());
 		//Creating the Mesh objects
@@ -397,7 +432,111 @@ void Game::LoadTheDirectionalLight()
 
 	sun2.AmbientColor = XMFLOAT4{ 0.1f,0.1f,0.1f,1.0f };
 	sun2.DiffuseColor = XMFLOAT4{ 1.0f, 0.0f, 0.0f, 1.0f };
-	sun2.Direction = XMFLOAT3{ -1.0f, +0.0f, 0.0f };
+	sun2.Direction = XMFLOAT3{ 0.0f, -4.0f, 0.0f };
+}
+
+void Game::CreatePath()
+{
+	if (rand() % 2 == 1)
+	{
+		CreatePlankStraight();
+	}
+	else
+	{
+		CreatePlankLeft();
+	}
+}
+
+void Game::CreatePlankStraight()
+{
+	//Common positions for now
+	XMFLOAT3 rotation = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	XMFLOAT3 scale = XMFLOAT3(1.0f, 0.1f, 5.0f);
+
+	if (!lastStraightCreated)
+	{
+		pathPosition.x += 2.0f;
+		pathPosition.z += 2.0f;
+	}
+	GameEntity *plankStraight = new GameEntity(pathPosition, rotation, scale, meshObjects[7], materialObjects[0]);
+	pathPosition.z += 5.0f;
+
+	gameObjects.push_back(plankStraight);
+	CheckIfNeedToRemovePlanks();
+	lastStraightCreated = true;
+}
+
+void Game::CreatePlankLeft()
+{
+	//Common positions for now
+	XMFLOAT3 rotation = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	XMFLOAT3 scale = XMFLOAT3(5.0f, 0.1f, 1.0f);
+	if (lastStraightCreated)
+	{
+		pathPosition.x -= 2.0f;
+		pathPosition.z -= 2.0f;
+	}
+
+	GameEntity *plankLeft = new GameEntity(pathPosition, rotation, scale, meshObjects[7], materialObjects[0]);
+	pathPosition.x -= 5.0f;
+
+	gameObjects.push_back(plankLeft);
+	CheckIfNeedToRemovePlanks();
+	lastStraightCreated = false;
+}
+
+void Game::CheckIfNeedToRemovePlanks()
+{
+	if (gameObjects.size() > 5)
+	{
+		delete gameObjects[1];
+		gameObjects.erase(gameObjects.begin() + 1);
+	}
+}
+
+void Game::MoveBallOnPlatform(float deltaTime)
+{
+	//Ball rotation
+	gameObjects[0]->RotateRelative(10.0f * deltaTime, 0.0f, 0.0f);
+
+	//Move platform depending on the ball's rotation
+	if (isBallDirectionLeft)
+	{
+		gameObjects[0]->MoveRelative(0.0f, 0.0f, +2.5f * deltaTime);
+		camera->MoveRelative(0.0f, 0.0f, +2.5f * deltaTime);
+	}
+	else
+	{
+		gameObjects[0]->MoveRelative(-2.5f * deltaTime, 0.0f, 0.0f);
+		camera->MoveRelative(-2.5f * deltaTime, 0.0f, 0.0f);
+	}
+
+	if (isFalling)
+	{
+		gameObjects[0]->Falling(deltaTime);
+	}
+}
+
+void Game::CheckPhysics()
+{
+	if (!isFalling)
+	{
+		XMFLOAT3 plankSize;
+		XMFLOAT3 plankPosition;
+		XMFLOAT3 ballPosition;
+		ballPosition = gameObjects[0]->GetPosition();
+		for (int i = 1; i < gameObjects.size(); i++)
+		{
+			plankSize = gameObjects[i]->GetScale();
+			plankPosition = gameObjects[i]->GetPosition();
+			if ((ballPosition.x < plankPosition.x + 0.7*plankSize.x) && (ballPosition.x > plankPosition.x - 0.7*plankSize.x) &&
+				(ballPosition.z < plankPosition.z + 0.7*plankSize.z) && (ballPosition.z > plankPosition.z - 0.7*plankSize.z))
+			{
+				return;
+			}
+		}
+		isFalling = true;
+	}
 }
 
 

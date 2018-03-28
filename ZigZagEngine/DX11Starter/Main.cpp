@@ -1,7 +1,7 @@
 
 #include <Windows.h>
 #include "Game.h"
-
+#include <time.h>
 // --------------------------------------------------------
 // Entry point for a graphical (non-console) Windows application
 // --------------------------------------------------------
@@ -43,7 +43,7 @@ int WINAPI WinMain(
 			SetCurrentDirectory(currentDir);
 		}
 	}
-
+	srand(time(NULL));
 	// Create the Game object using
 	// the app handle we got from WinMain
 	Game dxGame(hInstance);

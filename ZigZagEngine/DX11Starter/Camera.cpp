@@ -2,8 +2,8 @@
 
 Camera::Camera(int width, int height)
 {
-	direction = XMFLOAT3(0, 0, 1);
-	position = XMFLOAT3(0, 0, -5);
+	direction = XMFLOAT3(-0.4f, -0.25f, 1.0f);
+	position = XMFLOAT3(2.0f, 1.5f, -6.0f);
 
 	this->width = width;
 	this->height = height;
@@ -68,6 +68,24 @@ XMFLOAT4X4 Camera::getViewMatrix()
 void Camera::setProjectionMatrix(XMFLOAT4X4 pro)
 {
 	projectionMatrix = pro;
+}
+
+void Camera::MoveRelative(float x, float y, float z)
+{
+	position.x += x;
+	position.y += y;
+	position.z += z;
+	MakeViewMatrix();
+}
+
+XMFLOAT3 Camera::GetPosition()
+{
+	return position;
+}
+
+XMFLOAT3 Camera::GetDirection()
+{
+	return direction;
 }
 
 void Camera::Update(float deltaTime)

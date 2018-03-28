@@ -38,10 +38,18 @@ private:
 	void CreateBasicGeometry();
 	void CreateEntities();
 	void LoadTheDirectionalLight();
+	void CreatePath();
+	void CreatePlankStraight();
+	void CreatePlankLeft();
+	void CheckIfNeedToRemovePlanks();
+	void MoveBallOnPlatform(float deltaTime);
+	void CheckPhysics();
+
 	Camera* camera;
 
 	DirectionalLight sun;
 	DirectionalLight sun2;
+	int timeToCheck = 1;
 
 	ID3D11SamplerState* sampler1;
 	D3D11_SAMPLER_DESC sampleData1;
@@ -59,5 +67,11 @@ private:
 	// Keeps track of the old mouse position.  Useful for 
 	// determining how far the mouse moved in a single frame.
 	POINT prevMousePos;
+	bool lastStraightCreated;
+
+	XMFLOAT3 pathPosition;
+	bool isBallDirectionLeft;
+	bool isFalling;
+	float degreeRotation = 1.5708f;
 };
 

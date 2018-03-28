@@ -19,6 +19,9 @@ public:
 	void OnResize(int width, int height);
 	void Update(float deltaTime);
 	void MoveByMouse(float x, float y);
+	void MoveRelative(float x, float y, float z);
+	XMFLOAT3 GetPosition();
+	XMFLOAT3 GetDirection();
 
 private:
 	void MakeProjectionMatrix();

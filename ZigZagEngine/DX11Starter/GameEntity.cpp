@@ -8,6 +8,7 @@ GameEntity::GameEntity(XMFLOAT3 position, XMFLOAT3 rotation, XMFLOAT3 scale, Mes
 	this->material = material;
 	mesh = inputMesh;
 	GenerateWorldMatrix();
+	gravity = 0.0f;
 }
 
 GameEntity::~GameEntity()
@@ -36,6 +37,11 @@ void GameEntity::SetPosition(XMFLOAT3 position)
 	shouldGenerateWorldMatrix = true;
 }
 
+XMFLOAT3 GameEntity::GetPosition()
+{
+	return position;
+}
+
 void GameEntity::SetRotation(float x, float y, float z)
 {
 	rotation = { x, y, z };
@@ -48,6 +54,11 @@ void GameEntity::SetRotation(XMFLOAT3 rotation)
 	shouldGenerateWorldMatrix = true;
 }
 
+XMFLOAT3 GameEntity::GetRotation()
+{
+	return rotation;
+}
+
 void GameEntity::SetScale(float x, float y, float z)
 {
 	scale = { x, y, z };
@@ -58,6 +69,11 @@ void GameEntity::SetScale(XMFLOAT3 scale)
 {
 	this->scale = scale;
 	shouldGenerateWorldMatrix = true;
+}
+
+XMFLOAT3 GameEntity::GetScale()
+{
+	return scale;
 }
 
 void GameEntity::MoveRelative(float x, float y, float z)
@@ -124,6 +140,12 @@ void GameEntity::PrepareMaterial(XMFLOAT4X4 view, XMFLOAT4X4 projection)
 	tempPixelShader->CopyAllBufferData();
 
 
+}
+
+void GameEntity::Falling(float deltaTime)
+{
+	gravity += deltaTime * 0.001f;
+	position.y -= gravity;
 }
 
 Mesh* GameEntity::GetMesh()
