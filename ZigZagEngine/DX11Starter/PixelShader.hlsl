@@ -28,6 +28,7 @@ cbuffer externalData : register(b0)
 {
 	DirectionalLight sun;
 	DirectionalLight sun2;
+	float alpha;
 };
 
 Texture2D diffuseTexture  : register(t0);
@@ -66,7 +67,9 @@ float4 main(VertexToPixel input) : SV_TARGET
 	float3 normalToSun2 = normalize(-sun2.Direction);
 	float surfaceDotSun2 = saturate(dot(input.normal, normalToSun2));
 	float4 sun2Light = (sun2.DiffuseColor*surfaceDotSun2) + sun2.AmbientColor;
-
+	float4 outputColor = surfaceColor*(sun1Light + sun2Light);
+	outputColor.a = alpha;
 	//Light multiplied with texture
-	return surfaceColor*(sun1Light + sun2Light);
+	//return float4(alpha, alpha, alpha, alpha);
+	return outputColor;
 }

@@ -122,7 +122,7 @@ void GameEntity::GenerateWorldMatrix()
 	XMStoreFloat4x4(&worldMatrix, XMMatrixTranspose(world));
 }
 
-void GameEntity::PrepareMaterial(XMFLOAT4X4 view, XMFLOAT4X4 projection)
+void GameEntity::PrepareMaterial(XMFLOAT4X4 view, XMFLOAT4X4 projection, float alpha)
 {
 	GenerateWorldMatrix();
 	SimpleVertexShader *tempVertexShader = material->GetVertexShader();
@@ -133,19 +133,31 @@ void GameEntity::PrepareMaterial(XMFLOAT4X4 view, XMFLOAT4X4 projection)
 	tempVertexShader->SetMatrix4x4("projection", projection);
 	tempPixelShader->SetShaderResourceView("diffuseTexture", material->GetSRV());
 	tempPixelShader->SetSamplerState("basicSampler", material->GetSampler());
+	tempPixelShader->SetFloat("alpha", alpha);
 	tempVertexShader->SetShader();
 	tempPixelShader->SetShader();	
 
 	tempVertexShader->CopyAllBufferData();
 	tempPixelShader->CopyAllBufferData();
-
-
 }
 
-void GameEntity::Falling(float deltaTime)
+void GameEntity::Falling(float deltaTime, float gravity)
 {
-	gravity += deltaTime * 0.001f;
+	gravity += deltaTime * gravity;
 	position.y -= gravity;
+}
+
+//returns true if transitioning
+bool GameEntity::TransitionPlankFromTopToPosition(XMFLOAT3 finalPosition, float deltaTime)
+{
+	position.y -= 2.2*deltaTime;
+	if (position.y <= finalPosition.y)
+	{
+		position.y = finalPosition.y;
+		return false;
+	}
+	return true;
+	shouldGenerateWorldMatrix = true;
 }
 
 Mesh* GameEntity::GetMesh()

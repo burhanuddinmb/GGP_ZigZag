@@ -38,10 +38,15 @@ private:
 	void CreateBasicGeometry();
 	void CreateEntities();
 	void LoadTheDirectionalLight();
+	void InitialisingLocalVariables();
+
+	//To create paths
 	void CreatePath();
 	void CreatePlankStraight();
 	void CreatePlankLeft();
 	void CheckIfNeedToRemovePlanks();
+	void EnableBlending();
+	//To run game
 	void MoveBallOnPlatform(float deltaTime);
 	void CheckPhysics();
 
@@ -66,12 +71,20 @@ private:
 
 	// Keeps track of the old mouse position.  Useful for 
 	// determining how far the mouse moved in a single frame.
+
+	ID3D11RasterizerState* rsState;
+	ID3D11BlendState* blendState;
+
 	POINT prevMousePos;
 	bool lastStraightCreated;
-
+	bool plankBeingRemoved = false;
 	XMFLOAT3 pathPosition;
 	bool isBallDirectionLeft;
 	bool isFalling;
-	float degreeRotation = 1.5708f;
+	float gravity;
+	float degreeRotation = 1.5708f; //90degrees
+	float plankBeingPlaced = false;
+	XMFLOAT3 finalPositionOfLatestPlankCreated;
+	XMFLOAT3 finalPositionOfDeletingPlank;
 };
 

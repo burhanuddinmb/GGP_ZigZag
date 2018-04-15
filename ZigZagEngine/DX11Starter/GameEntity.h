@@ -36,9 +36,11 @@ public:
 
 	void ResizeRelative(float x, float y, float z);
 
-	void PrepareMaterial(XMFLOAT4X4 view, XMFLOAT4X4 projection);
+	void PrepareMaterial(XMFLOAT4X4 view, XMFLOAT4X4 projection, float alpha = 1.0f); //defaulting alpha to 1.0f if no value is passed.
 
-	void Falling(float deltaTime);
+	void Falling(float deltaTime, float gravity);
+
+	bool TransitionPlankFromTopToPosition(XMFLOAT3 finalPosition, float deltaTime);
 
 private:
 

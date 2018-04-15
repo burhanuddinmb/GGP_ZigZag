@@ -17,7 +17,7 @@ using namespace DirectX;
 Game::Game(HINSTANCE hInstance)
 	: DXCore(
 		hInstance,		   // The application's handle
-		"DirectX Game",	   // Text for the window's title bar
+		"ZigZag",	   // Text for the window's title bar
 		1280,			   // Width of the window's client area
 		720,			   // Height of the window's client area
 		true)			   // Show extra stats (fps) in title bar?
@@ -65,6 +65,10 @@ Game::~Game()
 	}
 	materialObjects.clear();
 
+	if (rsState != nullptr) rsState->Release();
+
+	if (blendState != nullptr) blendState->Release();
+
 	delete camera;
 
 	// Delete our simple shader objects, which
@@ -81,14 +85,8 @@ void Game::Init()
 	// Helper methods for loading shaders, creating some basic
 	// geometry to draw and some simple camera matrices.
 	//  - You'll be expanding and/or replacing these later
-	pathPosition = XMFLOAT3(0.0f, -0.52f, 2.0f);
-	lastStraightCreated = true;
-	isFalling = false;
-	LoadTheDirectionalLight();
-	LoadShadersAndTextures();
-	CreateCamera();
-	CreateBasicGeometry();
-
+	InitialisingLocalVariables();
+	EnableBlending();
 	// Makes the controllable entities here
 	CreateEntities();
 
@@ -310,8 +308,20 @@ void Game::CreateEntities()
 	//gameObjects.push_back(entity3);
 	//gameObjects.push_back(entity4);
 	gameObjects.push_back(entity5);
+
+	//Put the two planks
 	CreatePlankStraight();
 	CreatePlankStraight();
+
+	//Correct position
+	XMFLOAT3 tmpPosition;
+	for (int i = 1; i < gameObjects.size(); i++)
+	{
+		tmpPosition = gameObjects[i]->GetPosition();
+		tmpPosition.y -= 2.0f;
+		gameObjects[i]->SetPosition(tmpPosition);
+	}
+	plankBeingPlaced = false;
 }
 
 
@@ -338,7 +348,23 @@ void Game::Update(float deltaTime, float totalTime)
 		CreatePath();
 	}
 
-	//Change boll rotation on key-press
+	//New plank
+	if (plankBeingPlaced)
+	{
+		plankBeingPlaced = gameObjects[gameObjects.size() - 1]->TransitionPlankFromTopToPosition(finalPositionOfLatestPlankCreated, deltaTime);
+	}
+
+	//Removing old plank
+	if (plankBeingRemoved)
+	{
+		plankBeingRemoved = gameObjects[1]->TransitionPlankFromTopToPosition(finalPositionOfDeletingPlank, deltaTime);
+		if (!plankBeingRemoved)
+		{
+			delete gameObjects[1];
+			gameObjects.erase(gameObjects.begin() + 1);
+		}
+	}
+	//Change ball rotation on key-press
 	//NEEDS TO BE FIXED!
 	const int KEY_UP = 0x1;
 	if (!isFalling && (GetAsyncKeyState(VK_SPACE) & KEY_UP) == KEY_UP)
@@ -394,9 +420,20 @@ void Game::Draw(float deltaTime, float totalTime)
 		1.0f,
 		0);
 
+
+	//Draw order shadowMap, objects, transparent objects
+
+	//Drawing objects
 	for (uint16_t i = 0; i < gameObjects.size(); i++)
 	{
+		//Not drawing transparent objects first
+		if ((plankBeingPlaced && (i == (gameObjects.size() - 1) )) || (plankBeingRemoved && i == 1))
+		{
+			continue;
+		}
+
 		gameObjects[i]->PrepareMaterial(camera->getViewMatrix(), camera->getProjectionMatrix());
+
 		//Creating the Mesh objects
 		// Set buffers in the input assembler
 		//  - Do this ONCE PER OBJECT you're drawing, since each object might
@@ -418,6 +455,67 @@ void Game::Draw(float deltaTime, float totalTime)
 			0,							// Offset to the first index we want to use
 			0);
 	}
+
+	//Transparent objects
+	float alpha = 1.0f;
+	if (plankBeingPlaced)
+	{
+		//last object in gameObjects
+		int i = gameObjects.size() - 1;
+		alpha = 1 - ((gameObjects[i]->GetPosition().y - finalPositionOfLatestPlankCreated.y)/2);
+		gameObjects[i]->PrepareMaterial(camera->getViewMatrix(), camera->getProjectionMatrix(), alpha);
+
+		//Creating the Mesh objects
+		// Set buffers in the input assembler
+		//  - Do this ONCE PER OBJECT you're drawing, since each object might
+		//    have different geometry.
+		UINT stride = sizeof(Vertex);
+		UINT offset = 0;
+
+		ID3D11Buffer* vertexBufferPtr = gameObjects[i]->GetMesh()->GetVertexBuffer();
+		context->IASetVertexBuffers(0, 1, &vertexBufferPtr, &stride, &offset);
+		context->IASetIndexBuffer(gameObjects[i]->GetMesh()->GetIndexBuffer(), DXGI_FORMAT_R32_UINT, 0);
+
+		// Finally do the actual drawing
+		//  - Do this ONCE PER OBJECT you intend to draw
+		//  - This will use all of the currently set DirectX "stuff" (shaders, buffers, etc)
+		//  - DrawIndexed() uses the currently set INDEX BUFFER to look up corresponding
+		//     vertices in the currently set VERTEX BUFFER
+		context->DrawIndexed(
+			gameObjects[i]->GetMesh()->GetIndexCount(),   // The number of indices to use (we could draw a subset if we wanted)
+			0,							// Offset to the first index we want to use
+			0);
+
+	}
+	if (plankBeingRemoved)
+	{
+		//Oldest object apart from the ball at 0, so 1
+		alpha = (gameObjects[1]->GetPosition().y - finalPositionOfDeletingPlank.y)/2;
+		gameObjects[1]->PrepareMaterial(camera->getViewMatrix(), camera->getProjectionMatrix(), alpha);
+
+		//Creating the Mesh objects
+		// Set buffers in the input assembler
+		//  - Do this ONCE PER OBJECT you're drawing, since each object might
+		//    have different geometry.
+		UINT stride = sizeof(Vertex);
+		UINT offset = 0;
+
+		ID3D11Buffer* vertexBufferPtr = gameObjects[1]->GetMesh()->GetVertexBuffer();
+		context->IASetVertexBuffers(0, 1, &vertexBufferPtr, &stride, &offset);
+		context->IASetIndexBuffer(gameObjects[1]->GetMesh()->GetIndexBuffer(), DXGI_FORMAT_R32_UINT, 0);
+
+		// Finally do the actual drawing
+		//  - Do this ONCE PER OBJECT you intend to draw
+		//  - This will use all of the currently set DirectX "stuff" (shaders, buffers, etc)
+		//  - DrawIndexed() uses the currently set INDEX BUFFER to look up corresponding
+		//     vertices in the currently set VERTEX BUFFER
+		context->DrawIndexed(
+			gameObjects[1]->GetMesh()->GetIndexCount(),   // The number of indices to use (we could draw a subset if we wanted)
+			0,							// Offset to the first index we want to use
+			0);
+
+	}
+
 	// Present the back buffer to the user
 	//  - Puts the final frame we're drawing into the window so the user can see it
 	//  - Do this exactly ONCE PER FRAME (always at the very end of the frame)
@@ -433,6 +531,18 @@ void Game::LoadTheDirectionalLight()
 	sun2.AmbientColor = XMFLOAT4{ 0.1f,0.1f,0.1f,1.0f };
 	sun2.DiffuseColor = XMFLOAT4{ 1.0f, 0.0f, 0.0f, 1.0f };
 	sun2.Direction = XMFLOAT3{ 0.0f, -4.0f, 0.0f };
+}
+
+void Game::InitialisingLocalVariables()
+{
+	pathPosition = XMFLOAT3(0.0f, 1.52f, 2.0f);
+	lastStraightCreated = true;
+	isFalling = false;
+	LoadTheDirectionalLight();
+	LoadShadersAndTextures();
+	CreateCamera();
+	CreateBasicGeometry();
+	gravity = 0.004f;
 }
 
 void Game::CreatePath()
@@ -458,12 +568,15 @@ void Game::CreatePlankStraight()
 		pathPosition.x += 2.0f;
 		pathPosition.z += 2.0f;
 	}
+	finalPositionOfLatestPlankCreated = pathPosition;
+	finalPositionOfLatestPlankCreated.y -= 2.0f;
 	GameEntity *plankStraight = new GameEntity(pathPosition, rotation, scale, meshObjects[7], materialObjects[0]);
 	pathPosition.z += 5.0f;
 
 	gameObjects.push_back(plankStraight);
 	CheckIfNeedToRemovePlanks();
 	lastStraightCreated = true;
+	plankBeingPlaced = true;
 }
 
 void Game::CreatePlankLeft()
@@ -476,22 +589,55 @@ void Game::CreatePlankLeft()
 		pathPosition.x -= 2.0f;
 		pathPosition.z -= 2.0f;
 	}
-
+	finalPositionOfLatestPlankCreated = pathPosition;
+	finalPositionOfLatestPlankCreated.y -= 2.0f;
 	GameEntity *plankLeft = new GameEntity(pathPosition, rotation, scale, meshObjects[7], materialObjects[0]);
 	pathPosition.x -= 5.0f;
 
 	gameObjects.push_back(plankLeft);
 	CheckIfNeedToRemovePlanks();
 	lastStraightCreated = false;
+	plankBeingPlaced = true;
 }
 
 void Game::CheckIfNeedToRemovePlanks()
 {
-	if (gameObjects.size() > 5)
+	if (!plankBeingRemoved && gameObjects.size() > 8)
 	{
-		delete gameObjects[1];
-		gameObjects.erase(gameObjects.begin() + 1);
+		plankBeingRemoved = true;
+		finalPositionOfDeletingPlank = gameObjects[1]->GetPosition();
+		finalPositionOfDeletingPlank.y -= 1.0f;
 	}
+}
+
+void Game::EnableBlending()
+{
+	// Fill out a description and create the state
+	D3D11_RASTERIZER_DESC rd = {};
+	rd.CullMode = D3D11_CULL_NONE;
+	rd.FillMode = D3D11_FILL_SOLID;
+
+	device->CreateRasterizerState(&rd, &rsState);
+	// Set up a blend state
+	D3D11_BLEND_DESC bd = {};
+	bd.AlphaToCoverageEnable = false;
+	bd.IndependentBlendEnable = false;
+
+	bd.RenderTarget[0].BlendEnable = true;
+
+	bd.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+	bd.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+
+	bd.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+	bd.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
+
+	bd.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+	device->CreateBlendState(&bd, &blendState);
+
+	context->OMSetBlendState(blendState, 0, 0xFFFFFFFF);
 }
 
 void Game::MoveBallOnPlatform(float deltaTime)
@@ -513,7 +659,7 @@ void Game::MoveBallOnPlatform(float deltaTime)
 
 	if (isFalling)
 	{
-		gameObjects[0]->Falling(deltaTime);
+		gameObjects[0]->Falling(deltaTime, gravity);
 	}
 }
 
