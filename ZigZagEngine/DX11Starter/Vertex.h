@@ -5,11 +5,13 @@
 // --------------------------------------------------------
 // A custom vertex definition
 //
-// You will eventually ADD TO this, and/or make more of these!
+// - Updated to support lighting and eventually textures
+// - "Color" was removed, as it is rarely used for basic rendering
 // --------------------------------------------------------
 struct Vertex
 {
 	DirectX::XMFLOAT3 Position;	    // The position of the vertex
-	DirectX::XMFLOAT3 Normal;        
-	DirectX::XMFLOAT2 UV;
+	DirectX::XMFLOAT2 UV;           // UV Coordinate for texturing (soon)
+	DirectX::XMFLOAT3 Normal;       // Normal for lighting
+	DirectX::XMFLOAT3 Tangent;		// Tangent - needed for normal mapping
 };

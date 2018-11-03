@@ -141,16 +141,43 @@ void GameEntity::PrepareMaterial(XMFLOAT4X4 view, XMFLOAT4X4 projection, float a
 	tempPixelShader->CopyAllBufferData();
 }
 
+
+//Prepare material for water
+
+void GameEntity::PrepareMaterialWater(XMFLOAT4X4 view, XMFLOAT4X4 projection, float tempTime, int scrollNo, float alpha)
+{
+	GenerateWorldMatrix();
+	SimpleVertexShader *tempVertexShader = material->GetVertexShader();
+	SimplePixelShader *tempPixelShader = material->GetPixelShader();
+
+	tempVertexShader->SetMatrix4x4("world", worldMatrix);
+	tempVertexShader->SetMatrix4x4("view", view);
+	tempVertexShader->SetMatrix4x4("projection", projection);
+	tempVertexShader->SetFloat("time", tempTime);
+	tempPixelShader->SetShaderResourceView("diffuseTexture", material->GetSRV());
+	tempPixelShader->SetShaderResourceView("WaterNormal", material->GetSRV());
+	tempPixelShader->SetShaderResourceView("WaterNormal1", material->GetSRV());
+	tempPixelShader->SetSamplerState("basicSampler", material->GetSampler());
+	tempPixelShader->SetFloat("time", tempTime);
+	tempPixelShader->SetFloat("scrollNumber", (float)scrollNo);
+	tempPixelShader->SetFloat("alpha", alpha);
+	tempVertexShader->SetShader();
+	tempPixelShader->SetShader();
+
+	tempVertexShader->CopyAllBufferData();
+	tempPixelShader->CopyAllBufferData();
+}
+
 void GameEntity::Falling(float deltaTime, float gravity)
 {
-	gravity += deltaTime * gravity;
-	position.y -= gravity;
+	timeStep += deltaTime;
+	position.y = timeStep * (timeStep * gravity + timeStep *gravity / 2.0f);
 }
 
 //returns true if transitioning
 bool GameEntity::TransitionPlankFromTopToPosition(XMFLOAT3 finalPosition, float deltaTime)
 {
-	position.y -= 2.2*deltaTime;
+	position.y -= 2.2f*deltaTime;
 	if (position.y <= finalPosition.y)
 	{
 		position.y = finalPosition.y;
@@ -159,6 +186,12 @@ bool GameEntity::TransitionPlankFromTopToPosition(XMFLOAT3 finalPosition, float 
 	return true;
 	shouldGenerateWorldMatrix = true;
 }
+
+Material * GameEntity::GetMaterial()
+{
+	return material;
+}
+
 
 Mesh* GameEntity::GetMesh()
 {

@@ -1,11 +1,12 @@
 #include "Material.h"
 
-Material::Material(SimpleVertexShader * vertexShader, SimplePixelShader * pixelShader, ID3D11ShaderResourceView* SRV, ID3D11SamplerState* sampler)
+Material::Material(SimpleVertexShader * vertexShader, SimplePixelShader * pixelShader, ID3D11ShaderResourceView* SRV, ID3D11SamplerState* sampler, EmitterColor colorName)
 {
 	this->vertexShader = vertexShader;
 	this->pixelShader = pixelShader;
 	this->SRV = SRV;
 	this->sampler = sampler;
+	this->colorName = colorName;
 }
 
 Material::~Material()
@@ -34,4 +35,9 @@ ID3D11ShaderResourceView * Material::GetSRV()
 ID3D11SamplerState * Material::GetSampler()
 {
 	return sampler;
+}
+
+EmitterColor Material::GetColor()
+{
+	return colorName;
 }

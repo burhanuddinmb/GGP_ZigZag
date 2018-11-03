@@ -43,7 +43,7 @@ int WINAPI WinMain(
 			SetCurrentDirectory(currentDir);
 		}
 	}
-	srand(time(NULL));
+	srand((unsigned int)time(NULL));
 	// Create the Game object using
 	// the app handle we got from WinMain
 	Game dxGame(hInstance);

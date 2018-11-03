@@ -3,6 +3,7 @@
 #include "Material.h"
 #include <vector>
 #include "Lights.h"
+#include "Emitter.h"
 
 using namespace std;
 using namespace DirectX;
@@ -38,14 +39,16 @@ public:
 
 	void PrepareMaterial(XMFLOAT4X4 view, XMFLOAT4X4 projection, float alpha = 1.0f); //defaulting alpha to 1.0f if no value is passed.
 
+	void PrepareMaterialWater(XMFLOAT4X4 view, XMFLOAT4X4 projection, float time, int scrollNumber, float alpha = 1.0f);
+
 	void Falling(float deltaTime, float gravity);
 
 	bool TransitionPlankFromTopToPosition(XMFLOAT3 finalPosition, float deltaTime);
 
+	Material* GetMaterial();
+
 private:
-
 	void GenerateWorldMatrix();
-
 	Mesh* mesh;
 	Material* material;
 	XMFLOAT3 position;
@@ -54,5 +57,6 @@ private:
 	XMFLOAT4X4 worldMatrix;
 	bool shouldGenerateWorldMatrix;
 	float gravity;
+	float timeStep = 0.0f;
 };
 
